@@ -1,0 +1,17 @@
+{
+  "name": "ti-mate",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "deploy": "gcloud app deploy",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "csvtojson": "^1.1.9",
+    "express": "^4.16.3"
+  }
+}

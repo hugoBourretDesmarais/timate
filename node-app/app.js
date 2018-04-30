@@ -4,6 +4,9 @@ var express = require('express')
 var app = express()
 var csv = require('csvtojson')
 var bodyParser = require('body-parser')
+var cors = require('cors')
+app.use(cors())
+
 app.use( bodyParser.json() );       // to support JSON-encoded bodies
 app.use(bodyParser.urlencoded({     // to support URL-encoded bodies
     parameterLimit: 100000,
@@ -19,8 +22,7 @@ class Device {
         this.clientMacAddress = clientMacAddress;
         this.clientManuf = clientManuf;
         //array of dates
-        this.dates = [];
-        this.dates.append(currentDate);
+        this.dates = [currentDate];
      }  
 }
 
@@ -30,6 +32,8 @@ let devices = new Map();
 // maps the date to all the clientMacAddresses that were there at that time (each minutes)
 let timeMap = new Map();
 
+let numberCall = 0;
+
 // param: IN 
 // day : the day of the week (from 0-6)
 function getNumberOfPeopleAtEachHours(day){
@@ -37,16 +41,15 @@ function getNumberOfPeopleAtEachHours(day){
     for (var i = 0; i < 24; i++) {
         numberOfPeopleAtEachHours.push({"avg": 0, "nb": 0});
     }
-    
-    for (var key in timeMap){
-        console.log(key);
-        if (key.getDay() == day) {
-            let avg = numberOfPeopleAtEachHours[key.getHours()].avg;
-            let nb = numberOfPeopleAtEachHours[key.getHours()].avg + 1;
-            numberOfPeopleAtEachHours[key.getHours()].avg = ((avg * nb) / nb + 1) + (timeMap.get(key).length / nb + 1);
-            numberOfPeopleAtEachHours[key.getHours()].nb += 1;
+    Array.from(timeMap.keys()).forEach( function(date) {
+        console.log(date);
+        if (date.getDay() == day) {
+            let avg = numberOfPeopleAtEachHours[date.getHours()].avg;
+            let nb = numberOfPeopleAtEachHours[date.getHours()].avg + 1;
+            numberOfPeopleAtEachHours[date.getHours()].avg = ((avg * nb) / nb + 1) + (timeMap.get(date).length / nb + 1);
+            numberOfPeopleAtEachHours[date.getHours()].nb += 1;
         }
-    }
+    });
     return numberOfPeopleAtEachHours;
 }
 
@@ -55,31 +58,46 @@ app.get('/', function(req,res){
 });
 
 app.get('/all', function(req,res){
-    res.status(200).send(devices.values())
+    console.log("device")
+    res.status(200).send(JSON.stringify([...devices]));
 });
 
 app.post('/devices', function(req, res) {
+    console.log("TEST #" + numberCall)
+    numberCall += 1;
     let jsonArray = JSON.parse(req.body.devices);
-    let currentDate = new Date();
-    let presentDevices = []
+    let currentDate = new Date(req.body.date);
+    if (currentDate == undefined) {
+        currentDate = new Date();
+    }
+    let presentDevices = new Map();
     jsonArray.forEach( function(device) {
-        if (devices.get(device.clientMacAddress)) {
-            devices.get(device.clientMacAddress).dates.append(currentDate);
-            presentDevices.append(device.clientMacAddress)
-        } else {
-            devices.set(device.clientMacAddress, new Device(device.name, device.macAddress, device.clientMacAddress, device.clientManuf, currentDate));
+        if (device.clientMacAddress != "" && !presentDevices.has(device.clientMacAddress)) {
+            if (devices.has(device.clientMacAddress)) {
+                devices.get(device.clientMacAddress).dates.push(currentDate);
+            } else {
+                devices.set(device.clientMacAddress, new Device(device.name, device.macAddress, device.clientMacAddress, device.clientManuf, currentDate));
+                console.log("new device")
+            }
+            presentDevices.set(device.clientMacAddress);
         }
    } );
-   if (presentDevices.length > 0) {
-       timeMap.append(currentDate, presentDevices);
+   let presentDevicesArray = Array.from(presentDevices.keys());
+   if (presentDevicesArray.length > 0) {
+       timeMap.set(currentDate, presentDevicesArray);
    }
    res.status(200).send('Success')
 });
 
+app.get('/timeMap', function(req,res){
+    console.log("timeMap")
+    res.status(200).send(JSON.stringify([...timeMap]));
+});
+
 app.get('/numberOfPeopleAtEachHours', function(req,res){
-    let day = req.params.day;
+    let day = req.param('day');
     if (day != undefined) {
-        res.status(200).send(getNumberOfPeopleAtEachHours(req.params.day));
+        res.status(200).send(getNumberOfPeopleAtEachHours(day));
     } else {
         res.status(500).send('Error : Expected a day as input');
     }
@@ -87,12 +105,15 @@ app.get('/numberOfPeopleAtEachHours', function(req,res){
 
 app.get('/getNumberOfPeopleLive', function(req,res){
     // TODO create a new variable to store the last date instead of searching for the last date.
-    let now =  timeMap.keys().reduce((a, b) =>  a > b ? a : b);
-    res.status(200).send(timeMap.get(now).length);  
+    let dates = Array.from(timeMap.keys());
+    let now =  dates.reduce((a, b) =>  a > b ? a : b);
+    let length = timeMap.get(now).length;
+    res.status(200).send(length.toString());  
 });
 
 app.get('/cellphone', function(req,res){
-    let newArray = devices.values().filter(function (el) {
+    let allDevice = Array.from(devices.values());
+    let newArray = allDevice.filter(function (el) {
         return el.clientManuf == "Apple" || el.clientManuf == "Google" || el.clientManuf == "SamsungE" ;
         });
     res.status(200).send(newArray)

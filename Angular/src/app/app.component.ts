@@ -13,6 +13,14 @@ export class AppComponent implements OnInit, AfterContentInit {
   constructor(private communicationService: CommunicationService) { }
 
   ngOnInit(): void {
+
+    this.communicationService.getNumberOfPeopleAtEachHours(0).subscribe(
+      valide => {
+          console.log("OK")
+      },
+      error => console.log("----- Error with getNumberOfPeopleAtEachHours() -----")
+  );
+    
     var w = 500;
     var h = 200;
     var padding = 5;
@@ -25,7 +33,6 @@ export class AppComponent implements OnInit, AfterContentInit {
     var min = 0;
     var max = d3.max(dataset, function(d){return d});
     var yScale = d3.scaleLinear().domain([min, max]).range([5,h-10]);
-    var xScale = d3.scaleLinear().domain([0, ]).
 
     var yAxis = d3.axisLeft(yScale).ticks(5);
     var axis = svg.append("g").call(yAxis)

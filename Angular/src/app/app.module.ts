@@ -4,6 +4,7 @@ import { NgModule } from '@angular/core';
 
 import { AppComponent } from './app.component';
 import { CommunicationService } from './communication.service';
+import { HttpModule } from '@angular/http';
 
 
 @NgModule({
@@ -11,7 +12,8 @@ import { CommunicationService } from './communication.service';
     AppComponent
   ],
   imports: [
-    BrowserModule
+    BrowserModule,
+    HttpModule
   ],
   providers: [CommunicationService],
   bootstrap: [AppComponent]

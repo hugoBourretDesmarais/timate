@@ -39,17 +39,19 @@ let numberCall = 0;
 function getNumberOfPeopleAtEachHours(day){
     let numberOfPeopleAtEachHours = []
     for (var i = 0; i < 24; i++) {
-        numberOfPeopleAtEachHours.push({"avg": 0, "nb": 0});
+        var today = new Date();
+        today.setTime(i * (60 * 60 * 1000));
+        numberOfPeopleAtEachHours.push({"avg": 0, "nb": 0, "time": today});
     }
     Array.from(timeMap.keys()).forEach( function(date) {
-        console.log(date);
         if (date.getDay() == day) {
             let avg = numberOfPeopleAtEachHours[date.getHours()].avg;
-            let nb = numberOfPeopleAtEachHours[date.getHours()].avg + 1;
-            numberOfPeopleAtEachHours[date.getHours()].avg = ((avg * nb) / nb + 1) + (timeMap.get(date).length / nb + 1);
+            let nb = numberOfPeopleAtEachHours[date.getHours()].nb;
+            numberOfPeopleAtEachHours[date.getHours()].avg = avg * nb / (nb + 1) + timeMap.get(date).length / (nb + 1);
             numberOfPeopleAtEachHours[date.getHours()].nb += 1;
         }
     });
+    console.log(numberOfPeopleAtEachHours)
     return numberOfPeopleAtEachHours;
 }
 
@@ -91,13 +93,19 @@ app.post('/devices', function(req, res) {
 
 app.get('/timeMap', function(req,res){
     console.log("timeMap")
+    timeMap.set(new Date(), "Stuff")
     res.status(200).send(JSON.stringify([...timeMap]));
 });
 
 app.get('/numberOfPeopleAtEachHours', function(req,res){
+    console.log("numberOfPeopleAtEachHours")
     let day = req.param('day');
     if (day != undefined) {
-        res.status(200).send(getNumberOfPeopleAtEachHours(day));
+        let nbPeopleAtEachHours = getNumberOfPeopleAtEachHours(day);
+        nbPeopleAtEachHours.forEach(el => {
+            delete el.nb;
+        });
+        res.status(200).send(nbPeopleAtEachHours);
     } else {
         res.status(500).send('Error : Expected a day as input');
     }

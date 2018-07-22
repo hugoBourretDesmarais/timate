@@ -14,6 +14,7 @@ app.use(bodyParser.urlencoded({     // to support URL-encoded bodies
     extended: true
 })); 
 
+
 // ***** Variables ***** //
 class Device {
     constructor(name, macAddress, clientMacAddress, clientManuf, currentDate){
@@ -22,7 +23,8 @@ class Device {
         this.clientMacAddress = clientMacAddress;
         this.clientManuf = clientManuf;
         //array of dates
-        this.dates = [currentDate];
+        let tuple = [currentDate, currentDate]
+        this.dates = [tuple];
      }  
 }
 
@@ -56,28 +58,38 @@ function getNumberOfPeopleAtEachHours(day){
 }
 
 app.get('/', function(req,res){
-    res.status(200).send('Salut toi !')
+    res.status(200).send('Salut toi ! et toi')
 });
 
-app.get('/all', function(req,res){
-    console.log("device")
-    res.status(200).send(JSON.stringify([...devices]));
+app.get('/devices', function(req,res){
+    console.log("get_devices")
+    res.status(200).send(JSON.stringify([...devices.values()]));
 });
 
 app.post('/devices', function(req, res) {
-    console.log("TEST #" + numberCall)
-    numberCall += 1;
+    console.log("post_devices")
     let jsonArray = JSON.parse(req.body.devices);
-    let currentDate = new Date(req.body.date);
-    if (currentDate == undefined) {
-        currentDate = new Date();
-    }
+    let currentDate = new Date();
     let presentDevices = new Map();
-    jsonArray.forEach( function(device) {
-        if (device.clientMacAddress != "" && !presentDevices.has(device.clientMacAddress)) {
-            if (devices.has(device.clientMacAddress)) {
-                devices.get(device.clientMacAddress).dates.push(currentDate);
-            } else {
+    jsonArray.forEach( function(device) 
+    {
+        if (device.clientMacAddress != "" && !presentDevices.has(device.clientMacAddress)) 
+        {
+            if (devices.has(device.clientMacAddress)) 
+            {
+                let dates = devices.get(device.clientMacAddress).dates;
+                let dateForNewRange = currentDate.setHours(currentDate.getHours() - 1);
+                if (dates[dates.length - 1][1] > dateForNewRange)
+                {
+                    dates[dates.length - 1][1] = currentDate;
+                }
+                else 
+                {
+                    dates.push([currentDate, currentDate]);
+                }
+            } 
+            else 
+            {
                 devices.set(device.clientMacAddress, new Device(device.name, device.macAddress, device.clientMacAddress, device.clientManuf, currentDate));
                 console.log("new device")
             }
@@ -127,7 +139,7 @@ app.get('/cellphone', function(req,res){
     res.status(200).send(newArray)
 });
 
-let server = app.listen(process.env.PORT || '8081', function(){
+let server = app.listen(process.env.PORT || '8080', function(){
     console.log('App listening on port %s', server.address().port);
 
 })
